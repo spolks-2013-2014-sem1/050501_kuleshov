@@ -1,5 +1,7 @@
+#include "../spolks_lib/sockets.c"
+#include "../spolks_lib/utils.c"
+
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -10,14 +12,9 @@
 #include <netdb.h>
 #include <string.h>
 #include <libgen.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include "../spolks_lib/sockets.c"
 
-
-int ReceiveToBuf(int descriptor, char *buf, size_t len);
-
-FILE *CreateReceiveFile(char *fileName);
+#define replyBufSize 256
+#define bufSize 4096
 
 void receiveFile(char *hostName, unsigned int port);
 void sendFile(char *serverName, unsigned int port, char *filePath);
@@ -30,18 +27,17 @@ void intHandler(int signo)
     if (serverSocketDescriptor != -1)
         close(serverSocketDescriptor);
     else
-        shutdown(clientSocketDescriptor, SHUT_WR);
-    exit(0);
+        shutdown(clientSocketDescriptor, SHUT_RDWR);
+    _exit(0);
 }
 
 
 int main(int argc, char *argv[])
 {
     if (argc < 3 || argc > 4) {
-        fprintf(stderr, "Wrong arguments number\n");
+        fprintf(stderr, "usage 1: main [host] [port]\nusage 2: main [host] [port] [filePath]\n");
         return 1;
     }
-    
     // Change SIGINT action
     struct sigaction intSignal;
     intSignal.sa_handler = intHandler;
@@ -66,16 +62,12 @@ void receiveFile(char *hostName, unsigned int port)
         exit(EXIT_FAILURE);
     }
 
-    struct sockaddr_in remote;
-    socklen_t rlen = sizeof(remote);
-
-    char replyBuf[256], buf[4096];
+    char replyBuf[replyBufSize], buf[bufSize];
 
     while (1) {
         printf("\nAwaiting connections...\n");
         int remoteSocketDescriptor =
-            accept(serverSocketDescriptor, (struct sockaddr *) &remote,
-                   &rlen);
+            accept(serverSocketDescriptor, NULL, NULL);
 
         // Receive file name and file size
         if (ReceiveToBuf
@@ -88,27 +80,30 @@ void receiveFile(char *hostName, unsigned int port)
 
         printf("File size: %ld, file name: %s\n", fileSize, fileName);
 
-        FILE *file = CreateReceiveFile(fileName);
+        FILE *file = CreateReceiveFile(fileName, "Received_files");
         if (file == NULL) {
             perror("Create file error");
             exit(EXIT_FAILURE);
         }
-        
         // Receiving file    
-        long bytesWritten = 0;
-        while (bytesWritten < fileSize) {
-            size_t recvSize =
-                recv(remoteSocketDescriptor, buf, sizeof(buf), 0);
-            if (recvSize > 0)
-                bytesWritten += fwrite(buf, 1, recvSize, file);
-            else if (recvSize <= 0) {
+        long totalBytesReceived = 0;
+        int recvSize;
+        while (totalBytesReceived < fileSize) {
+            recvSize = recv(remoteSocketDescriptor, buf, sizeof(buf), 0);
+            if (recvSize > 0) {
+                fwrite(buf, 1, recvSize, file);
+                totalBytesReceived += recvSize;
+            } else if (recvSize == 0) {
+                printf("Received EOF\n");
+                break;
+            } else {
                 perror("receive error");
                 break;
             }
         }
         fclose(file);
-        printf("%ld bytes received.\n", bytesWritten);
-        printf("Receiving file completed.\n");
+        printf("Receiving file completed. %ld bytes received.\n",
+               totalBytesReceived);
         close(remoteSocketDescriptor);
     }
 }
@@ -136,12 +131,10 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
         perror("Open file error");
         exit(EXIT_FAILURE);
     }
-    // Get file size
-    fseek(file, 0L, SEEK_END);
-    long fileSize = ftell(file);
-    fseek(file, 0L, SEEK_SET);
 
-    char replyBuf[256];
+    long fileSize = GetFileSize(file);
+
+    char replyBuf[replyBufSize];
     sprintf(replyBuf, "%s:%ld", basename(filePath), fileSize);
 
     // Send file name and file size
@@ -150,57 +143,22 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
         exit(EXIT_FAILURE);
     }
 
-    char buf[4096];
-    long totallyReadBytes = 0;
-    size_t bytesRead = 0;
+    char buf[bufSize];
+    long totalBytesSent = 0;
+    size_t bytesRead;
 
     // Sending file
-    while (totallyReadBytes < fileSize) {
+    while (totalBytesSent < fileSize) {
         bytesRead = fread(buf, 1, sizeof(buf), file);
-        totallyReadBytes += bytesRead;
         int sendBytes = send(clientSocketDescriptor, buf, bytesRead, 0);
         if (sendBytes < 0) {
             perror("Sending error");
             exit(EXIT_FAILURE);
         }
+        totalBytesSent += sendBytes;
     }
     printf("Sending file completed\n");
 
     shutdown(clientSocketDescriptor, SHUT_RDWR);
     fclose(file);
-}
-
-
-// Receive data from socket to buffer
-int ReceiveToBuf(int descriptor, char *buf, size_t len)
-{
-    size_t recvSize = 0;
-    while (recvSize < len) {
-        size_t numberOfBytesRead =
-            recv(descriptor, buf + recvSize, len - recvSize, 0);
-        if (numberOfBytesRead == 0)
-            break;
-        else if (numberOfBytesRead < 0)
-            return -1;
-        else
-            recvSize += numberOfBytesRead;
-    }
-    return recvSize;
-}
-
-FILE *CreateReceiveFile(char *fileName)
-{
-    char filePath[256];
-
-    // Create folder for received files if not exist
-    struct stat st = { 0 };
-    if (stat("Received_files", &st) == -1) {
-        if (mkdir("Received_files", 0777) == -1)
-            return NULL;
-    }
-
-    strcpy(filePath, "Received_files//");
-    strcat(filePath, fileName);
-
-    return fopen(filePath, "wb");
 }

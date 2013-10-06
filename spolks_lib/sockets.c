@@ -71,3 +71,22 @@ int createServerSocket(char *hostName, unsigned short port,
 
     return socketDescriptor;
 }
+
+
+// Receive data from socket to buffer
+int ReceiveToBuf(int descriptor, char *buf, int len)
+{
+    int recvSize = 0;
+    int numberOfBytesRead;
+    while (recvSize < len) {
+        numberOfBytesRead =
+            recv(descriptor, buf + recvSize, len - recvSize, 0);
+        if (numberOfBytesRead == 0)
+            break;
+        else if (numberOfBytesRead < 0)
+            return -1;
+        else
+            recvSize += numberOfBytesRead;
+    }
+    return recvSize;
+}

@@ -1,6 +1,6 @@
 CC=gcc
 
-CFLAGS=-Wall -std=c99 -D_POSIX_C_SOURCE
+CFLAGS=-Wall -std=c99 -D_GNU_SOURCE
 
 
 all: 

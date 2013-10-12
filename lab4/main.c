@@ -30,7 +30,7 @@ void intHandler(int signo)
     if (serverSocketDescriptor != -1)
         close(serverSocketDescriptor);
     else
-        shutdown(clientSocketDescriptor, SHUT_RDWR);
+        close(clientSocketDescriptor);
 
     _exit(0);
 }
@@ -197,7 +197,6 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
         }
     }
     printf("Sending file completed\n");
-    fflush(stdout);
-    shutdown(clientSocketDescriptor, SHUT_RDWR);
+    close(clientSocketDescriptor);
     fclose(file);
 }

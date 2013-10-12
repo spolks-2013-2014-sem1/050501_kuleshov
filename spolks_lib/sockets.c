@@ -6,7 +6,7 @@
 
 #define h_addr h_addr_list[0]
 
-// Create socket and fill in sockaddr_in structure
+// Create TCP socket and fill in sockaddr_in structure
 int createTcpSocket(char *hostName, unsigned short port,
                     struct sockaddr_in *sin)
 {
@@ -38,8 +38,8 @@ int createTcpSocket(char *hostName, unsigned short port,
     return socketDescriptor;
 }
 
-// Create server socket
-int createServerSocket(char *hostName, unsigned short port,
+
+int createTcpServerSocket(char *hostName, unsigned short port,
                        struct sockaddr_in *sin, int qlen)
 {
     int socketDescriptor;

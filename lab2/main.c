@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     int socketDescriptor;
 
     if ((socketDescriptor =
-         createServerSocket(hostName, port, &sin, 5)) == -1) {
+         createTcpServerSocket(hostName, port, &sin, 5)) == -1) {
         printf("Creation socket error\n");
         return 1;
     }

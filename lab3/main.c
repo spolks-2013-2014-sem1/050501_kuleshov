@@ -57,7 +57,7 @@ void receiveFile(char *hostName, unsigned int port)
     struct sockaddr_in sin;
 
     if ((serverSocketDescriptor =
-         createServerSocket(hostName, port, &sin, 5)) == -1) {
+         createTcpServerSocket(hostName, port, &sin, 5)) == -1) {
         printf("Creation socket error\n");
         exit(EXIT_FAILURE);
     }

@@ -40,7 +40,7 @@ int createTcpSocket(char *hostName, unsigned short port,
 
 
 int createTcpServerSocket(char *hostName, unsigned short port,
-                       struct sockaddr_in *sin, int qlen)
+                          struct sockaddr_in *sin, int qlen)
 {
     int socketDescriptor;
 
@@ -72,6 +72,59 @@ int createTcpServerSocket(char *hostName, unsigned short port,
     return socketDescriptor;
 }
 
+
+// Create UDP socket and fill in sockaddr_in structure
+int createUdpSocket(char *hostName, unsigned short port,
+                    struct sockaddr_in *sin)
+{
+    memset(sin, 0, sizeof(*sin));
+    sin->sin_family = AF_INET;
+
+    struct hostent *hptr = gethostbyname(hostName);
+    if (hptr != NULL)
+        memcpy(&sin->sin_addr, hptr->h_addr, hptr->h_length);   // sin_addr contain ip which bind to socket
+    else {
+        perror("Incorrect host name");
+        return -1;
+    }
+
+    sin->sin_port = htons(port);        // convert to network byte order
+
+    struct protoent *pptr = getprotobyname("UDP");
+    if (pptr == NULL) {
+        fprintf(stderr, "Incorrect protocol name\n");
+        return -1;
+    }
+    // Create socket
+    int socketDescriptor = socket(PF_INET, SOCK_DGRAM, pptr->p_proto);
+    if (socketDescriptor < 0) {
+        perror("Create socket error");
+        return -1;
+    }
+
+    return socketDescriptor;
+}
+
+
+int createUdpServerSocket(char *hostName, unsigned short port,
+                          struct sockaddr_in *sin)
+{
+    int socketDescriptor;
+
+    // Create socket
+    if ((socketDescriptor =
+         createUdpSocket(hostName, port,
+                         (struct sockaddr_in *) sin)) == -1) {
+        return -1;
+    }
+    // Bind socket
+    if (bind(socketDescriptor, (struct sockaddr *) sin, sizeof(*sin)) < 0) {
+        perror("Bind socket error");
+        return -1;
+    }
+
+    return socketDescriptor;
+}
 
 // Receive data from socket to buffer
 int ReceiveToBuf(int descriptor, char *buf, int len)

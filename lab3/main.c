@@ -35,7 +35,8 @@ void intHandler(int signo)
 int main(int argc, char *argv[])
 {
     if (argc < 3 || argc > 4) {
-        fprintf(stderr, "usage 1: main [host] [port]\nusage 2: main [host] [port] [filePath]\n");
+        fprintf(stderr,
+                "usage 1: main [host] [port]\nusage 2: main [host] [port] [filePath]\n");
         return 1;
     }
     // Change SIGINT action
@@ -73,10 +74,23 @@ void receiveFile(char *hostName, unsigned int port)
         if (ReceiveToBuf
             (remoteSocketDescriptor, (char *) &replyBuf,
              sizeof(replyBuf)) <= 0) {
-            exit(EXIT_FAILURE);
+            close(remoteSocketDescriptor);
+            fprintf(stderr, "Error receiving file name and file size\n");
+            continue;
         }
         char *fileName = strtok(replyBuf, ":");
-        long fileSize = atoi(strtok(NULL, ":"));
+        if (fileName == NULL) {
+            close(remoteSocketDescriptor);
+            fprintf(stderr, "Bad file name\n");
+            continue;
+        }
+        char *size = strtok(NULL, ":");
+        if (size == NULL) {
+            close(remoteSocketDescriptor);
+            fprintf(stderr, "Bad file size\n");
+            continue;
+        }
+        long fileSize = atoi(size);
 
         printf("File size: %ld, file name: %s\n", fileSize, fileName);
 

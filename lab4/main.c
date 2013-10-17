@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -35,10 +36,10 @@ void intHandler(int signo)
     _exit(0);
 }
 
+int oobFlag = 0;
 void urgHandler(int signo)
 {
-    char oobBuf;
-    recv(remoteSocketDescriptor, &oobBuf, 1, MSG_OOB);
+    oobFlag = 1;
 }
 
 
@@ -128,10 +129,18 @@ void receiveFile(char *hostName, unsigned int port)
 
         while (totalBytesReceived < fileSize) {
 
-            if (sockatmark(remoteSocketDescriptor) == 1)
+            if (sockatmark(remoteSocketDescriptor) == 1 && oobFlag == 1) {
                 printf("Total bytes received: %ld\n", totalBytesReceived);
 
+                char oobBuf;
+                int n = recv(remoteSocketDescriptor, &oobBuf, 1, MSG_OOB);
+                if (n == -1)
+                    fprintf(stderr, "receive OOB error\n");
+                oobFlag = 0;
+            }
+
             recvSize = recv(remoteSocketDescriptor, buf, sizeof(buf), 0);
+
             if (recvSize > 0) {
                 totalBytesReceived += recvSize;
                 fwrite(buf, 1, recvSize, file);
@@ -193,7 +202,12 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
     long totalBytesSent = 0;
     size_t bytesRead;
 
+    int period = (fileSize / bufSize) / 5;      // period of sending oob data
+    if (period == 0)
+        period = 1;
+
     // Sending file
+    int i = 0;
     while (totalBytesSent < fileSize) {
         bytesRead = fread(buf, 1, sizeof(buf), file);
         int sendBytes = send(clientSocketDescriptor, buf, bytesRead, 0);
@@ -202,15 +216,19 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
             exit(EXIT_FAILURE);
         }
         totalBytesSent += sendBytes;
-        printf("Total bytes sent: %ld\n", totalBytesSent);
 
-        sendBytes = send(clientSocketDescriptor, "!", 1, MSG_OOB);
-        if (sendBytes < 0) {
-            perror("Sending error");
-            exit(EXIT_FAILURE);
+        // Send OOB data
+        if (++i % period == 0) {
+            printf("Total bytes sent: %ld\n", totalBytesSent);
+            sendBytes = send(clientSocketDescriptor, "!", 1, MSG_OOB);
+            if (sendBytes < 0) {
+                perror("Sending error");
+                exit(EXIT_FAILURE);
+            }
         }
     }
-    printf("Sending file completed\n");
+    printf("Sending file completed. Total bytes sent: %ld\n",
+           totalBytesSent);
     close(clientSocketDescriptor);
     fclose(file);
 }

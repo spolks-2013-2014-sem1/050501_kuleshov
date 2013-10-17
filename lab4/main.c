@@ -202,7 +202,7 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
     long totalBytesSent = 0;
     size_t bytesRead;
 
-    int period = (fileSize / bufSize) / 3;      // period of sending oob data
+    int period = (fileSize / bufSize) / 3 + 1;      // period of sending oob data
     if (period == 0)
         period = 1;
 

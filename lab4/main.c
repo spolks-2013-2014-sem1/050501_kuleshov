@@ -130,7 +130,7 @@ void receiveFile(char *hostName, unsigned int port)
         while (totalBytesReceived < fileSize) {
 
             if (sockatmark(remoteSocketDescriptor) == 1 && oobFlag == 1) {
-                printf("Total bytes received: %ld\n", totalBytesReceived);
+                printf("Receive OOB byte. Total bytes received: %ld\n", totalBytesReceived);
 
                 char oobBuf;
                 int n = recv(remoteSocketDescriptor, &oobBuf, 1, MSG_OOB);
@@ -202,11 +202,12 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
     long totalBytesSent = 0;
     size_t bytesRead;
 
-    int period = (fileSize / bufSize) / 3 + 1;      // period of sending oob data
-    if (period == 0)
-        period = 1;
+    int middle = (fileSize / bufSize) / 2;
+    if (middle == 0)
+        middle = 1;
 
     // Sending file
+	printf("Start sendig file.\n");
     int i = 0;
     while (totalBytesSent < fileSize) {
         bytesRead = fread(buf, 1, sizeof(buf), file);
@@ -217,9 +218,9 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
         }
         totalBytesSent += sendBytes;
 
-        // Send OOB data
-        if (++i % period == 0) {
-            printf("Total bytes sent: %ld\n", totalBytesSent);
+        // Send OOB data in the middle of sending file
+        if (++i == middle) {
+            printf("Sent OOB byte. Total bytes sent: %ld\n", totalBytesSent);
             sendBytes = send(clientSocketDescriptor, "!", 1, MSG_OOB);
             if (sendBytes < 0) {
                 perror("Sending error");

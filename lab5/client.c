@@ -99,7 +99,7 @@ void sendFileTCP(char *serverName, unsigned int serverPort, char *filePath)
         middle = 1;
 
     // Sending file
-    printf("Start sendig file.\n");
+    printf("Start sending file.\n");
     int i = 0;
     while (totalBytesSent < fileSize) {
         bytesRead = fread(buf, 1, sizeof(buf), file);
@@ -175,8 +175,7 @@ void sendFileUDP(char *serverName, unsigned int serverPort, char *filePath)
         exit(EXIT_FAILURE);
     }
 
-    printf("Start sending...\n");
-
+    printf("Start sending file.\n");
     char buf[bufSize];
     long totalBytesSent = 0;
     size_t bytesRead;

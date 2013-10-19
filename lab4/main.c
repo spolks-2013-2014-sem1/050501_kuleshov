@@ -202,7 +202,7 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
         middle = 1;
 
     // Sending file
-    printf("Start sendig file.\n");
+    printf("Start sending file.\n");
     int i = 0;
     while (totalBytesSent < fileSize) {
         bytesRead = fread(buf, 1, sizeof(buf), file);

@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 3 || argc > 4) {
         fprintf(stderr,
-                "usage 1: main [host] [port]\nusage 2: main [host] [port] [filePath]\n");
+                "usage 1: main <host> <port>\nusage 2: main <host> <port> <filePath>\n");
         return 1;
     }
     // Change SIGINT action
@@ -74,11 +74,6 @@ void receiveFile(char *hostName, unsigned int port)
         exit(EXIT_FAILURE);
     }
 
-    if (fcntl(serverSocketDescriptor, F_SETOWN, getpid()) < 0) {
-        perror("fcntl()");
-        exit(-1);
-    }
-
     char replyBuf[replyBufSize], buf[bufSize];
 
     while (1) {
@@ -96,8 +91,7 @@ void receiveFile(char *hostName, unsigned int port)
         }
         // Receive file name and file size
         if (ReceiveToBuf
-            (remoteSocketDescriptor, (char *) &replyBuf,
-             sizeof(replyBuf)) <= 0) {
+            (remoteSocketDescriptor, replyBuf, sizeof(replyBuf)) <= 0) {
             close(remoteSocketDescriptor);
             fprintf(stderr, "Error receiving file name and file size\n");
             continue;
@@ -130,7 +124,8 @@ void receiveFile(char *hostName, unsigned int port)
         while (totalBytesReceived < fileSize) {
 
             if (sockatmark(remoteSocketDescriptor) == 1 && oobFlag == 1) {
-                printf("Receive OOB byte. Total bytes received: %ld\n", totalBytesReceived);
+                printf("Receive OOB byte. Total bytes received: %ld\n",
+                       totalBytesReceived);
 
                 char oobBuf;
                 int n = recv(remoteSocketDescriptor, &oobBuf, 1, MSG_OOB);
@@ -207,7 +202,7 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
         middle = 1;
 
     // Sending file
-	printf("Start sendig file.\n");
+    printf("Start sendig file.\n");
     int i = 0;
     while (totalBytesSent < fileSize) {
         bytesRead = fread(buf, 1, sizeof(buf), file);
@@ -220,7 +215,8 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
 
         // Send OOB data in the middle of sending file
         if (++i == middle) {
-            printf("Sent OOB byte. Total bytes sent: %ld\n", totalBytesSent);
+            printf("Sent OOB byte. Total bytes sent: %ld\n",
+                   totalBytesSent);
             sendBytes = send(clientSocketDescriptor, "!", 1, MSG_OOB);
             if (sendBytes < 0) {
                 perror("Sending error");

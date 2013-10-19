@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 3 || argc > 4) {
         fprintf(stderr,
-                "usage 1: main [host] [port]\nusage 2: main [host] [port] [filePath]\n");
+                "usage 1: main <host> <port>\nusage 2: main <host> <port> <filePat>]\n");
         return 1;
     }
     // Change SIGINT action
@@ -72,8 +72,7 @@ void receiveFile(char *hostName, unsigned int port)
 
         // Receive file name and file size
         if (ReceiveToBuf
-            (remoteSocketDescriptor, (char *) &replyBuf,
-             sizeof(replyBuf)) <= 0) {
+            (remoteSocketDescriptor, replyBuf, sizeof(replyBuf)) <= 0) {
             close(remoteSocketDescriptor);
             fprintf(stderr, "Error receiving file name and file size\n");
             continue;
@@ -164,12 +163,12 @@ void sendFile(char *serverName, unsigned int serverPort, char *filePath)
     // Sending file
     while (totalBytesSent < fileSize) {
         bytesRead = fread(buf, 1, sizeof(buf), file);
-        int sendBytes = send(clientSocketDescriptor, buf, bytesRead, 0);
-        if (sendBytes < 0) {
+        int sentBytes = send(clientSocketDescriptor, buf, bytesRead, 0);
+        if (sentBytes < 0) {
             perror("Sending error");
             exit(EXIT_FAILURE);
         }
-        totalBytesSent += sendBytes;
+        totalBytesSent += sentBytes;
     }
     printf("Sending file completed\n");
 

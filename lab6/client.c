@@ -110,8 +110,7 @@ void sendFileTCP(char *serverName, unsigned int serverPort, char *filePath)
         }
         totalBytesSent += sentBytes;
 
-        // Send OOB data in the middle of sending file4
-
+        // Send OOB data in the middle of sending file
         if (++i == middle) {
             printf("Sent OOB byte. Total bytes sent: %ld\n",
                    totalBytesSent);
@@ -121,7 +120,6 @@ void sendFileTCP(char *serverName, unsigned int serverPort, char *filePath)
                 exit(EXIT_FAILURE);
             }
         }
-
     }
     printf("Sending file completed. Total bytes sent: %ld\n",
            totalBytesSent);

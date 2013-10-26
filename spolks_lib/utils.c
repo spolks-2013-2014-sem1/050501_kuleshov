@@ -43,3 +43,8 @@ long GetFileSize(FILE * file)
     fseek(file, pos, SEEK_SET);
     return fileSize;
 }
+
+unsigned long long IpPortToNumber(unsigned long IPv4, unsigned short port)
+{
+    return (((unsigned long long) IPv4) << 16) + (unsigned long long) port;
+}

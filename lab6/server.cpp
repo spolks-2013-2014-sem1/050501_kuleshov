@@ -13,7 +13,6 @@
 #include <netdb.h>
 #include <string.h>
 #include <libgen.h>
-#include <fcntl.h>
 #include <errno.h>
 
 #include <iostream>

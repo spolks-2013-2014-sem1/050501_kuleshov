@@ -7,21 +7,18 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <netdb.h>
 #include <string.h>
 #include <libgen.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <pthread.h>
 #include <inttypes.h>
 
 #include <iostream>
 #include <map>
-#include <vector>
 
 #define replyBufSize 256
 #define bufSize 4096

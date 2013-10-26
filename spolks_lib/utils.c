@@ -3,6 +3,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
+#include <stdarg.h>
 
 FILE *CreateReceiveFile(char *fileName, const char *folderName)
 {
@@ -47,4 +49,30 @@ long GetFileSize(FILE * file)
 unsigned long long IpPortToNumber(unsigned long IPv4, unsigned short port)
 {
     return (((unsigned long long) IPv4) << 16) + (unsigned long long) port;
+}
+
+
+// str is string like "fileName:fileSize\0"
+char *getFileSizePTR(char *str, int size)
+{
+    for (int i = 0; i < size; i++) {
+        if (str[i] == ':') {
+            str[i] = 0;
+            return &str[i + 1];
+        }
+    }
+    return NULL;
+}
+
+
+void safe_print(pthread_mutex_t* mutex, const char* message, ...)
+{	
+    va_list args;
+    va_start( args, message );
+
+	pthread_mutex_lock(mutex);
+    vprintf(message, args);
+	pthread_mutex_unlock(mutex);
+
+    va_end(args);	
 }

@@ -18,8 +18,6 @@
 
 #include <iostream>
 #include <map>
-#include <vector>
-#include <string>
 
 #define replyBufSize 256
 #define bufSize 4096
@@ -38,10 +36,10 @@ struct fileInfo {
 
 void receiveFileTCP(char *serverName, unsigned int port);
 void receiveFileUDP(char *serverName, unsigned int port);
-int TCP_Processing(int descr, map <int, fileInfo *> &filesMap);
-int TCP_OOB_Processing(int descr, map < int, fileInfo * >&filesMap);
-int UDP_Processing(int UdpServerDescr,
-                   map <unsigned long long, fileInfo*> &filesMap);
+int TCP_Processing(int descr, map < int, fileInfo * >&filesMap);
+void TCP_OOB_Processing(int descr, map < int, fileInfo * >&filesMap);
+void UDP_Processing(int UdpServerDescr,
+                    map < unsigned long long, fileInfo * >&filesMap);
 
 
 int TcpServerDescr = -1;
@@ -74,13 +72,17 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+//------------------------------------------------//
+//------------------TCP SERVER--------------------//
+//------------------------------------------------//
+
 
 void receiveFileTCP(char *hostName, unsigned int port)
 {
     struct sockaddr_in sin;
 
     if ((TcpServerDescr =
-                createTcpServerSocket(hostName, port, &sin, 5)) == -1) {
+         createTcpServerSocket(hostName, port, &sin, 5)) == -1) {
         cerr << "Creation socket error\n";
         exit(EXIT_FAILURE);
     }
@@ -96,7 +98,7 @@ void receiveFileTCP(char *hostName, unsigned int port)
     socklen_t rlen;
     struct sockaddr_in remote;
 
-    map < int, fileInfo * > filesMap;
+    map < int, fileInfo * >filesMap;
 
     while (1) {
         memcpy(&rfds, &afds, sizeof(rfds));
@@ -110,6 +112,7 @@ void receiveFileTCP(char *hostName, unsigned int port)
             rsd =
                 accept(TcpServerDescr, (struct sockaddr *) &remote, &rlen);
             FD_SET(rsd, &afds);
+            FD_SET(rsd, &xset);
         }
         for (rsd = 0; rsd < nfds; ++rsd) {
             // search descriptors with exceptions (e.g. out-of-band data)
@@ -117,7 +120,6 @@ void receiveFileTCP(char *hostName, unsigned int port)
                 TCP_OOB_Processing(rsd, filesMap);
                 FD_CLR(rsd, &xset);
             }
-
             // search descriptors ready to read
             if ((rsd != TcpServerDescr) && FD_ISSET(rsd, &rfds)) {
                 if (TCP_Processing(rsd, filesMap) == 0) {
@@ -130,59 +132,7 @@ void receiveFileTCP(char *hostName, unsigned int port)
     }
 }
 
-void receiveFileUDP(char *hostName, unsigned int port)
-{
-    struct sockaddr_in sin;
-    int UdpServerDescr;
-
-    if ((UdpServerDescr =
-                createUdpServerSocket(hostName, port, &sin)) == -1) {
-        cerr<< "Creation socket error\n";
-        exit(EXIT_FAILURE);
-    }
-
-    struct timeval timeOut = { 30, 0 };
-    struct timeval *timePTR;
-
-    int clients = 0;
-    fd_set rfds;
-    int nfds = getdtablesize();
-    FD_ZERO(&rfds);
-
-    map<unsigned long long, fileInfo*> filesMap;
-
-    while (1) {
-
-        if (clients <= 0)
-            timePTR = NULL; 		// waiting for new clients infinitely
-        else {
-            timeOut = {30, 0};
-            timePTR = &timeOut;
-        }
-
-        FD_SET(UdpServerDescr, &rfds);
-        if (select(nfds, &rfds, (fd_set *) 0, (fd_set *) 0, timePTR) < 0) {
-            perror("Select");
-            return;
-        }
-        if (timePTR != NULL && timePTR->tv_sec == 0) {
-            cerr << "Timeout error\n";
-            return;
-        }
-        if (FD_ISSET(UdpServerDescr, &rfds)) {
-            int result = UDP_Processing(UdpServerDescr, filesMap);
-            if (result == 0)
-                clients--;
-
-            else if (result == -2)
-                clients++;
-        }
-
-    }
-}
-
-
-int TCP_Processing(int descr, map <int, fileInfo *> &filesMap)
+int TCP_Processing(int descr, map < int, fileInfo * >&filesMap)
 {
     char buf[bufSize], requestBuf[replyBufSize];
     int recvSize;
@@ -209,8 +159,8 @@ int TCP_Processing(int descr, map <int, fileInfo *> &filesMap)
             exit(EXIT_FAILURE);
         }
         long fileSize = atoi(size);
-        cout << "File size: " << fileSize << ", file name: " 
-			 << fileName << "\n";
+        cout << "File size: " << fileSize << ", file name: "
+            << fileName << "\n";
 
         FILE *file = CreateReceiveFile(fileName, "Received_files");
         if (file == NULL) {
@@ -218,7 +168,7 @@ int TCP_Processing(int descr, map <int, fileInfo *> &filesMap)
             exit(EXIT_FAILURE);
         }
         struct fileInfo *info = new fileInfo;
-        *info = {file, {0}, 0, fileSize};
+        *info = { file, {0}, 0, fileSize};
         strcpy(info->fileName, fileName);
 
         filesMap[descr] = info;
@@ -245,15 +195,14 @@ int TCP_Processing(int descr, map <int, fileInfo *> &filesMap)
 }
 
 
-int TCP_OOB_Processing(int descr, map < int, fileInfo * >&filesMap)
+void TCP_OOB_Processing(int descr, map < int, fileInfo * >&filesMap)
 {
-    map < int, fileInfo * >::iterator pos = filesMap.find(descr);
+    map <int,fileInfo*>::iterator pos = filesMap.find(descr);
     if (pos == filesMap.end())  // descr not found in array
-        return -1;
+        return;
 
     else {
         char oobBuf;
-
         struct fileInfo *info = pos->second;
 
         int recvSize = recv(descr, &oobBuf, sizeof(oobBuf), MSG_OOB);
@@ -261,15 +210,65 @@ int TCP_OOB_Processing(int descr, map < int, fileInfo * >&filesMap)
             cerr << "recv OOB error\n";
         else
             cout << "OOB byte received. Total received bytes of \""
-                 << info->fileName << "\": "
-                 << info->totalBytesReceived << "\n";
+                << info->fileName << "\": "
+                << info->totalBytesReceived << "\n";
     }
-    return 0;
+    return;
 }
 
 
-int UDP_Processing(int UdpServerDescr,
-                   map <unsigned long long, fileInfo*> &filesMap)
+
+//------------------------------------------------//
+//------------------UDP SERVER--------------------//
+//------------------------------------------------//
+
+void receiveFileUDP(char *hostName, unsigned int port)
+{
+    struct sockaddr_in sin;
+    int UdpServerDescr;
+
+    if ((UdpServerDescr =
+         createUdpServerSocket(hostName, port, &sin)) == -1) {
+        cerr << "Creation socket error\n";
+        exit(EXIT_FAILURE);
+    }
+
+    struct timeval timeOut = {30, 0};
+    struct timeval *timePTR;
+
+    fd_set rfds;
+    int nfds = getdtablesize();
+    FD_ZERO(&rfds);
+    map < unsigned long long, fileInfo * >filesMap;
+
+    while (1) {
+
+        if (filesMap.size() == 0)
+            timePTR = NULL;     // waiting for new clients infinitely
+        else {
+            timeOut = {30, 0};
+            timePTR = &timeOut;
+        }
+
+        FD_SET(UdpServerDescr, &rfds);
+        if (select(nfds, &rfds, (fd_set *) 0, (fd_set *) 0, timePTR) < 0) {
+            perror("Select");
+            return;
+        }
+        if (timePTR != NULL && timePTR->tv_sec == 0) {
+            cerr << "Timeout error\n";
+            return;
+        }
+        if (FD_ISSET(UdpServerDescr, &rfds)) {
+
+            UDP_Processing(UdpServerDescr, filesMap);
+        }
+    }
+}
+
+
+void UDP_Processing(int UdpServerDescr,
+                    map < unsigned long long, fileInfo * >&filesMap)
 {
     char buf[bufSize];
     int recvSize;
@@ -292,12 +291,14 @@ int UDP_Processing(int UdpServerDescr,
         exit(EXIT_FAILURE);
     }
 
-    unsigned long long address = IpPortToNumber(addr.sin_addr.s_addr, addr.sin_port);
+    unsigned long long address =
+        IpPortToNumber(addr.sin_addr.s_addr, addr.sin_port);
 
-    map < unsigned long long, fileInfo * >::iterator pos = filesMap.find(address);
+    map < unsigned long long, fileInfo * >::iterator pos =
+        filesMap.find(address);
 
-	// client address not found in array
-    if (pos == filesMap.end()) { 
+    // client address not found in array
+    if (pos == filesMap.end()) {
         char *fileName = strtok(buf, ":");
         if (fileName == NULL) {
             cerr << "Bad file name\n";
@@ -310,7 +311,7 @@ int UDP_Processing(int UdpServerDescr,
         }
         long fileSize = atoi(size);
         cout << "File size: " << fileSize << ", file name: "
-             << fileName << "\n";
+            << fileName << "\n";
 
         FILE *file = CreateReceiveFile(fileName, "Received_files");
         if (file == NULL) {
@@ -324,8 +325,6 @@ int UDP_Processing(int UdpServerDescr,
 
         filesMap[address] = info;
 
-        return -2;              // new client
-
     } else {
         struct fileInfo *info = pos->second;
         info->totalBytesReceived += recvSize;
@@ -337,8 +336,7 @@ int UDP_Processing(int UdpServerDescr,
             fclose(info->file);
             free(info);
             filesMap.erase(pos);
-            return 0;           // file received
         }
     }
-    return recvSize;
+    return;
 }

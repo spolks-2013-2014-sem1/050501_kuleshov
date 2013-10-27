@@ -19,6 +19,7 @@
 
 #include <iostream>
 #include <map>
+#include <list>
 
 #define replyBufSize 256
 #define bufSize 4096
@@ -81,6 +82,8 @@ void receiveFileTCP(char *hostName, unsigned int port)
         exit(EXIT_FAILURE);
     }
 
+    list<pthread_t> threads;
+	
     while (1) {
 
         intptr_t rsd = accept(TcpServerDescr, NULL, NULL);
@@ -95,6 +98,15 @@ void receiveFileTCP(char *hostName, unsigned int port)
             cerr << "Creating thread error\n";
             exit(EXIT_FAILURE);
         }
+        
+        threads.push_back(th);
+		
+		list<pthread_t>::iterator i = threads.begin();
+		while(i != threads.end()) {			
+			if(pthread_tryjoin_np(*i, NULL) == 0) 			
+				i = threads.erase(i);			
+			else i++;
+		}
     }
 }
 
@@ -232,6 +244,8 @@ void receiveFileUDP(char *hostName, unsigned int port)
     struct sockaddr_in remote;
     socklen_t rlen = sizeof(remote);
     int recvSize;
+	
+	list<pthread_t> threads;
 
     while (1) {
         pthread_mutex_lock(&mapMutex);
@@ -259,6 +273,14 @@ void receiveFileUDP(char *hostName, unsigned int port)
             fprintf(stderr, "Creating thread error\n");
             exit(EXIT_FAILURE);
         }
+        threads.push_back(th);
+		
+		list<pthread_t>::iterator i = threads.begin();
+		while(i != threads.end()) {
+			if(pthread_tryjoin_np(*i, NULL) == 0) 			
+				i = threads.erase(i);			
+			else i++;
+		}
     }
 }
 
@@ -316,7 +338,7 @@ void *UDP_Processing_thread(void *ptr)
             safe_print(&printMutex, "File \"%s\" received\n",
                        info->fileName);
             fclose(info->file);
-            free(info);
+            delete info;
 
             pthread_mutex_lock(&mapMutex);
             filesMap.erase(pos);

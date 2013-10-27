@@ -82,8 +82,8 @@ void receiveFileTCP(char *hostName, unsigned int port)
         exit(EXIT_FAILURE);
     }
 
-    list<pthread_t> threads;
-	
+    list < pthread_t > threads;
+
     while (1) {
 
         intptr_t rsd = accept(TcpServerDescr, NULL, NULL);
@@ -98,15 +98,16 @@ void receiveFileTCP(char *hostName, unsigned int port)
             cerr << "Creating thread error\n";
             exit(EXIT_FAILURE);
         }
-        
+
         threads.push_back(th);
-		
-		list<pthread_t>::iterator i = threads.begin();
-		while(i != threads.end()) {			
-			if(pthread_tryjoin_np(*i, NULL) == 0) 			
-				i = threads.erase(i);			
-			else i++;
-		}
+
+        list < pthread_t >::iterator i = threads.begin();
+        while (i != threads.end()) {
+            if (pthread_tryjoin_np(*i, NULL) == 0)
+                i = threads.erase(i);
+            else
+                i++;
+        }
     }
 }
 
@@ -244,8 +245,8 @@ void receiveFileUDP(char *hostName, unsigned int port)
     struct sockaddr_in remote;
     socklen_t rlen = sizeof(remote);
     int recvSize;
-	
-	list<pthread_t> threads;
+
+    list < pthread_t > threads;
 
     while (1) {
         pthread_mutex_lock(&mapMutex);
@@ -274,13 +275,14 @@ void receiveFileUDP(char *hostName, unsigned int port)
             exit(EXIT_FAILURE);
         }
         threads.push_back(th);
-		
-		list<pthread_t>::iterator i = threads.begin();
-		while(i != threads.end()) {
-			if(pthread_tryjoin_np(*i, NULL) == 0) 			
-				i = threads.erase(i);			
-			else i++;
-		}
+
+        list < pthread_t >::iterator i = threads.begin();
+        while (i != threads.end()) {
+            if (pthread_tryjoin_np(*i, NULL) == 0)
+                i = threads.erase(i);
+            else
+                i++;
+        }
     }
 }
 

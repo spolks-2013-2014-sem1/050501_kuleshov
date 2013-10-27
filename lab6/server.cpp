@@ -167,7 +167,7 @@ int TCP_Processing(int descr, map < int, fileInfo * >&filesMap)
             exit(EXIT_FAILURE);
         }
         struct fileInfo *info = new fileInfo;
-        *info = { file, {0}, 0, fileSize};
+        *info = {file, {0}, 0, fileSize};
         strcpy(info->fileName, fileName);
 
         filesMap[descr] = info;
@@ -182,7 +182,7 @@ int TCP_Processing(int descr, map < int, fileInfo * >&filesMap)
         } else if (recvSize == 0) {
             cout << "File \"" << info->fileName << "\" received\n";
             fclose(info->file);
-            free(info);
+            delete info;
             filesMap.erase(pos);
             return 0;
         } else {
@@ -196,7 +196,7 @@ int TCP_Processing(int descr, map < int, fileInfo * >&filesMap)
 
 void TCP_OOB_Processing(int descr, map < int, fileInfo * >&filesMap)
 {
-    map <int,fileInfo*>::iterator pos = filesMap.find(descr);
+    map < int, fileInfo * >::iterator pos = filesMap.find(descr);
     if (pos == filesMap.end())  // descr not found in array
         return;
 
@@ -232,7 +232,7 @@ void receiveFileUDP(char *hostName, unsigned int port)
         exit(EXIT_FAILURE);
     }
 
-    struct timeval timeOut = {30, 0};
+    struct timeval timeOut = { 30, 0 };
     struct timeval *timePTR;
 
     fd_set rfds;
@@ -333,7 +333,7 @@ void UDP_Processing(int UdpServerDescr,
         if (info->totalBytesReceived == info->fileSize) {
             cout << "File \"" << info->fileName << "\" received\n";
             fclose(info->file);
-            free(info);
+            delete info;
             filesMap.erase(pos);
         }
     }

@@ -1,3 +1,6 @@
+#ifdef __cplusplus 
+extern "C" {
+#endif
 
 #include "../spolks_lib/utils.c"
 #include "../spolks_lib/sockets.c"
@@ -15,11 +18,15 @@
 #include <libgen.h>
 #include <errno.h>
 #include <pthread.h>
-#include <inttypes.h>
+
+#ifdef __cplusplus 
+}
+#endif
 
 #include <iostream>
 #include <map>
 #include <list>
+#include <cstdint>
 
 #define replyBufSize 256
 #define bufSize 4096
@@ -217,7 +224,7 @@ int UdpServerDescr = -1;
 
 const unsigned char ACK = 1;
 
-map < unsigned long long, fileInfo * >filesMap;
+map < uint64_t, fileInfo * >filesMap;
 pthread_mutex_t mapMutex;
 
 void receiveFileUDP(char *hostName, unsigned int port)
@@ -251,9 +258,11 @@ void receiveFileUDP(char *hostName, unsigned int port)
     while (1) {
         pthread_mutex_lock(&mapMutex);
         if (filesMap.size() > 1)
-            setsockopt(UdpServerDescr, SOL_SOCKET, SO_RCVTIMEO, &timeOut, sizeof(struct timeval));      // set timeout
+            setsockopt(UdpServerDescr, SOL_SOCKET, SO_RCVTIMEO, &timeOut, 
+                       sizeof(struct timeval));      // set timeout
         else
-            setsockopt(UdpServerDescr, SOL_SOCKET, SO_RCVTIMEO, &noTimeOut, sizeof(struct timeval));    // disable timeout
+            setsockopt(UdpServerDescr, SOL_SOCKET, SO_RCVTIMEO, &noTimeOut, 
+                       sizeof(struct timeval));    // disable timeout
         pthread_mutex_unlock(&mapMutex);
 
         struct udpArg *arg = new udpArg;        // argument for new thread      
@@ -293,12 +302,11 @@ void *UDP_Processing_thread(void *ptr)
 
     socklen_t rlen = sizeof(arg->addr);
 
-    unsigned long long address =
+    uint64_t address =
         IpPortToNumber(arg->addr.sin_addr.s_addr, arg->addr.sin_port);
 
     pthread_mutex_lock(&mapMutex);
-    map < unsigned long long, fileInfo * >::iterator pos =
-        filesMap.find(address);
+    map < uint64_t, fileInfo * >::iterator pos = filesMap.find(address);
     pthread_mutex_unlock(&mapMutex);
 
     // client address not found in array

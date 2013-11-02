@@ -5,6 +5,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 FILE *CreateReceiveFile(char *fileName, const char *folderName)
 {
@@ -18,18 +19,17 @@ FILE *CreateReceiveFile(char *fileName, const char *folderName)
     }
 
     strcpy(filePath, folderName);
-    strcat(filePath, "//");
+    strcat(filePath, "/");
     strcat(filePath, fileName);
 
-    if (access(filePath, F_OK) != -1) {
-        time_t t = time(NULL);
-        struct tm tm = *localtime(&t);
-
-        char tmp[30];
-        sprintf(tmp, "_%d-%d-%d_%d-%d-%d", tm.tm_year + 1900,
-                tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-                tm.tm_sec);
-        strcat(filePath, tmp);
+    if (access(filePath, F_OK) != -1) {     // if file exists
+        
+        char time_buf[30];
+        time_t now;
+        time(&now);
+        strftime(time_buf, sizeof(time_buf), "_%Y-%m-%d_%H-%M-%S", localtime(&now));
+        
+        strcat(filePath, time_buf);
     }
 
     return fopen(filePath, "wb");
@@ -46,9 +46,9 @@ long GetFileSize(FILE * file)
     return fileSize;
 }
 
-unsigned long long IpPortToNumber(unsigned long IPv4, unsigned short port)
+uint64_t IpPortToNumber(uint32_t IPv4, uint16_t port)
 {
-    return (((unsigned long long) IPv4) << 16) + (unsigned long long) port;
+    return (((uint64_t) IPv4) << 16) | (uint64_t) port;
 }
 
 

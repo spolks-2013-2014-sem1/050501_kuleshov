@@ -1,3 +1,6 @@
+#ifdef __cplusplus 
+extern "C" {
+#endif
 
 #include "../spolks_lib/utils.c"
 #include "../spolks_lib/sockets.c"
@@ -15,8 +18,13 @@
 #include <libgen.h>
 #include <errno.h>
 
+#ifdef __cplusplus 
+}
+#endif
+
 #include <iostream>
 #include <map>
+#include <cstdint>
 
 #define replyBufSize 256
 #define bufSize 4096
@@ -37,8 +45,7 @@ void receiveFileTCP(char *serverName, unsigned int port);
 void receiveFileUDP(char *serverName, unsigned int port);
 int TCP_Processing(int descr, map < int, fileInfo * >&filesMap);
 void TCP_OOB_Processing(int descr, map < int, fileInfo * >&filesMap);
-void UDP_Processing(int UdpServerDescr,
-                    map < unsigned long long, fileInfo * >&filesMap);
+void UDP_Processing(int UdpServerDescr, map <uint64_t, fileInfo*> &filesMap);
 
 
 int TcpServerDescr = -1;
@@ -238,7 +245,7 @@ void receiveFileUDP(char *hostName, unsigned int port)
     fd_set rfds;
     int nfds = getdtablesize();
     FD_ZERO(&rfds);
-    map < unsigned long long, fileInfo * >filesMap;
+    map < uint64_t, fileInfo * >filesMap;
 
     while (1) {
 
@@ -266,8 +273,7 @@ void receiveFileUDP(char *hostName, unsigned int port)
 }
 
 
-void UDP_Processing(int UdpServerDescr,
-                    map < unsigned long long, fileInfo * >&filesMap)
+void UDP_Processing(int UdpServerDescr, map <uint64_t, fileInfo*> &filesMap)
 {
     char buf[bufSize];
     int recvSize;
@@ -290,11 +296,9 @@ void UDP_Processing(int UdpServerDescr,
         exit(EXIT_FAILURE);
     }
 
-    unsigned long long address =
-        IpPortToNumber(addr.sin_addr.s_addr, addr.sin_port);
+    uint64_t address = IpPortToNumber(addr.sin_addr.s_addr, addr.sin_port);
 
-    map < unsigned long long, fileInfo * >::iterator pos =
-        filesMap.find(address);
+    map < uint64_t, fileInfo * >::iterator pos = filesMap.find(address);
 
     // client address not found in array
     if (pos == filesMap.end()) {

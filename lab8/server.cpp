@@ -1,3 +1,6 @@
+#ifdef __cplusplus 
+extern "C" {
+#endif
 
 #include "../spolks_lib/utils.c"
 #include "../spolks_lib/sockets.c"
@@ -15,8 +18,12 @@
 #include <libgen.h>
 #include <errno.h>
 #include <pthread.h>
-#include <inttypes.h>
 
+#ifdef __cplusplus 
+}
+#endif
+
+#include <cstdint>
 #include <iostream>
 #include <map>
 
@@ -199,7 +206,7 @@ int UdpServerDescr = -1;
 const unsigned char ACK = 1;
 const unsigned char END = 2;
 
-map < unsigned long long, fileInfo * >filesMap;
+map < uint64_t, fileInfo * >filesMap;
 
 
 void receiveFileUDP(char *hostName, unsigned int port)
@@ -240,26 +247,26 @@ void receiveFileUDP(char *hostName, unsigned int port)
 }
 
 
-void UDP_Processing(unsigned char *buf, int size, struct sockaddr_in &addr)
+void UDP_Processing(unsigned char *buf, int recvSize, struct sockaddr_in &addr)
 {
     socklen_t rlen = sizeof(addr);
     int bytesTransmitted;
 
-    unsigned long long address =
+    uint64_t address =
         IpPortToNumber(addr.sin_addr.s_addr, addr.sin_port);
 
-    map < unsigned long long, fileInfo * >::iterator pos =
+    map < uint64_t, fileInfo * >::iterator pos =
         filesMap.find(address);
 
     // client address not found in array
     if (pos == filesMap.end()) {
 
-        char *size = getFileSizePTR((char *) buf, sizeof(buf));
-        if (size == NULL) {
+        char *fileSizeStr = getFileSizePTR((char *) buf, sizeof(buf));
+        if (fileSizeStr == NULL) {
             fprintf(stderr, "Bad file size\n");
             return;
         }
-        long fileSize = atoi(size);
+        long fileSize = atoi(fileSizeStr);
 
         char *fileName = (char *) buf;
 
@@ -285,7 +292,7 @@ void UDP_Processing(unsigned char *buf, int size, struct sockaddr_in &addr)
             exit(EXIT_FAILURE);
         }
 
-    } else if (buf[0] == END && size == 1) {
+    } else if (buf[0] == END && recvSize == 1) {
 
         struct fileInfo *info = pos->second;
 
@@ -304,7 +311,7 @@ void UDP_Processing(unsigned char *buf, int size, struct sockaddr_in &addr)
         case 0:                // child process
             {
                 struct fileInfo *info = pos->second;
-                if (fwrite(buf, 1, size, info->file) < (size_t) size) {
+                if (fwrite(buf, 1, recvSize, info->file) < (size_t) recvSize) {
                     fprintf(stderr, "write file error\n");
                     exit(EXIT_FAILURE);
                 }

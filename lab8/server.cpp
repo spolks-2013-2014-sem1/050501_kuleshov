@@ -261,7 +261,7 @@ void UDP_Processing(unsigned char *buf, int recvSize, struct sockaddr_in &addr)
     // client address not found in array
     if (pos == filesMap.end()) {
 
-        char *fileSizeStr = getFileSizePTR((char *) buf, sizeof(buf));
+        char *fileSizeStr = getFileSizePTR((char *) buf, recvSize);
         if (fileSizeStr == NULL) {
             fprintf(stderr, "Bad file size\n");
             return;

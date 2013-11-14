@@ -17,7 +17,6 @@ extern "C" {
 #include <string.h>
 #include <libgen.h>
 #include <errno.h>
-#include <pthread.h>
 
 #ifdef __cplusplus 
 }

@@ -7,7 +7,7 @@ CFLAGS_cpp=-Wall -std=c++0x
 
 all: 
 	$(CC_c) $(CFLAGS_c) client.c -o client
-	$(CC_cpp) $(CFLAGS_cpp) server.cpp -o server -lpthread
+	$(CC_cpp) $(CFLAGS_cpp) server.cpp -o server
 
 clean:
 	rm -f client
